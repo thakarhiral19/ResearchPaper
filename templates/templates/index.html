@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SciWrite Pro - AI Academic Paper Generator</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Layout */
+        .sidebar {
+            width: 320px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        h1 { font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; }
+        h2 { font-size: 1.25rem; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+        h3 { font-size: 1rem; margin-bottom: 12px; }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        textarea { resize: vertical; min-height: 80px; }
+
+        /* Dynamic Author List */
+        .author-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 12px;
+            align-items: start;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            border: 1px dashed var(--border-color);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background: var(--primary-hover); }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: #eff6ff; }
+        .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 8px; }
+        .btn-danger:hover { background: #fef2f2; }
+
+        .btn-generate {
+            width: 100%;
+            font-size: 1.125rem;
+            padding: 16px;
+            margin-top: auto;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .spinner {
+            border: 3px solid rgba(37, 99, 235, 0.2);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary);
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .toast {
+            position: fixed; top: 20px; right: 20px;
+            padding: 16px 24px; border-radius: 8px;
+            color: white; font-weight: 500; opacity: 0;
+            transition: opacity 0.3s; pointer-events: none;
+            z-index: 1000;
+        }
+        .toast.error { background: var(--danger); opacity: 1; }
+        .toast.success { background: var(--success); opacity: 1; }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <h1>SciWrite Pro</h1>
+            <p style="font-size: 0.875rem; color: var(--text-muted);">AI Academic Drafting Tool</p>
+        </div>
+
+        <div class="card" style="padding: 16px;">
+            <h3>Configuration</h3>
+            <label>API Key (Leave blank if set in ENV)</label>
+            <input type="password" id="api_key" placeholder="AIzaSy...">
+            
+            <label>Layout Style</label>
+            <select id="layout">
+                <option value="single">Single Column</option>
+                <option value="double">Double Column (IEEE/ACM)</option>
+            </select>
+
+            <label>Length Mode</label>
+            <select id="length_mode">
+                <option value="pages">Pages</option>
+                <option value="words">Word Count</option>
+            </select>
+
+            <label>Target Value</label>
+            <input type="number" id="length_val" value="4" min="1">
+        </div>
+
+        <button class="btn btn-generate" id="generateBtn" onclick="generatePaper()">Generate & Download</button>
+        <div class="loader" id="loader">
+            <div class="spinner"></div> Processing... (This may take 30-60s)
+        </div>
+    </div>
+
+    <div class="main-content" id="mainForm">
+        
+        <div class="card">
+            <h2>Paper Metadata</h2>
+            <label>Paper Title</label>
+            <input type="text" id="title" placeholder="A Novel Approach to..." required>
+            
+            <label>Keywords (comma separated)</label>
+            <input type="text" id="keywords" placeholder="Machine Learning, Neural Networks">
+            
+            <label>Target Venue/Journal</label>
+            <input type="text" id="venue" placeholder="NeurIPS, Nature, IEEE Access">
+        </div>
+
+        <div class="card">
+            <h2>Authors</h2>
+            <div id="authorList"></div>
+            <button class="btn btn-outline" onclick="addAuthor()">+ Add Author</button>
+        </div>
+
+        <div class="card">
+            <h2>Research Context & Notes</h2>
+            <p style="font-size:0.875rem; color:var(--text-muted); margin-bottom:16px;">Provide bullet points or rough drafts. The AI will formalize these into academic prose.</p>
+            
+            <label>Abstract / Core Idea</label>
+            <textarea id="note_abstract" placeholder="What is the core problem and solution?"></textarea>
+            
+            <label>Introduction Notes</label>
+            <textarea id="note_intro" placeholder="Background context..."></textarea>
+            
+            <label>Methodology Notes</label>
+            <textarea id="note_method" placeholder="Steps taken, algorithms used..."></textarea>
+            
+            <label>Results Notes (Triggers Python Chart Generation)</label>
+            <textarea id="note_results" placeholder="E.g., Model A achieved 95% accuracy compared to baseline 80%..."></textarea>
+            
+            <label>Extra Notes (Discussion, limitations)</label>
+            <textarea id="note_extra" placeholder="Future work..."></textarea>
+        </div>
+
+        <div class="card">
+            <h2>Bibliography & Figures</h2>
+            
+            <label>Custom BibTeX Entries (Optional)</label>
+            <textarea id="bibtex" placeholder="@article{...}" style="font-family: monospace;"></textarea>
+            
+            <label>Upload Figures (PNG/JPG/PDF)</label>
+            <input type="file" id="figures" multiple accept="image/*,.pdf">
+        </div>
+
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // State
+        let authors = [];
+
+        // Author Management
+        function renderAuthors() {
+            const container = document.getElementById('authorList');
+            container.innerHTML = '';
+            authors.forEach((author, index) => {
+                const row = document.createElement('div');
+                row.className = 'author-row';
+                row.innerHTML = `
+                    <input type="text" placeholder="Name" value="${author.name}" onchange="updateAuthor(${index}, 'name', this.value)">
+                    <input type="text" placeholder="Affiliation" value="${author.affil}" onchange="updateAuthor(${index}, 'affil', this.value)">
+                    <input type="email" placeholder="Email" value="${author.email}" onchange="updateAuthor(${index}, 'email', this.value)">
+                    <button class="btn-danger" onclick="removeAuthor(${index})">X</button>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function addAuthor() {
+            authors.push({name: '', affil: '', email: ''});
+            renderAuthors();
+        }
+
+        function updateAuthor(index, field, value) {
+            authors[index][field] = value;
+        }
+
+        function removeAuthor(index) {
+            authors.splice(index, 1);
+            renderAuthors();
+        }
+
+        function showToast(msg, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `toast ${type}`;
+            setTimeout(() => toast.className = 'toast', 4000);
+        }
+
+        // Add an initial author
+        addAuthor();
+
+        // Main Submission
+        async function generatePaper() {
+            const btn = document.getElementById('generateBtn');
+            const loader = document.getElementById('loader');
+            const title = document.getElementById('title').value;
+
+            if (!title) {
+                showToast("Paper Title is required.", "error");
+                return;
+            }
+
+            // Build FormData
+            const formData = new FormData();
+            formData.append('api_key', document.getElementById('api_key').value);
+            formData.append('title', title);
+            formData.append('keywords', document.getElementById('keywords').value);
+            formData.append('venue', document.getElementById('venue').value);
+            formData.append('layout', document.getElementById('layout').value);
+            formData.append('length_mode', document.getElementById('length_mode').value);
+            formData.append('length_val', document.getElementById('length_val').value);
+            formData.append('bibtex', document.getElementById('bibtex').value);
+            
+            formData.append('authors', JSON.stringify(authors));
+            
+            const notes = {
+                abstract: document.getElementById('note_abstract').value,
+                intro: document.getElementById('note_intro').value,
+                method: document.getElementById('note_method').value,
+                results: document.getElementById('note_results').value,
+                extra: document.getElementById('note_extra').value
+            };
+            formData.append('notes', JSON.stringify(notes));
+
+            const files = document.getElementById('figures').files;
+            for (let i = 0; i < files.length; i++) {
+                formData.append('figures', files[i]);
+            }
+
+            // UI State
+            btn.style.display = 'none';
+            loader.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || "Generation failed.");
+                }
+
+                // Handle file download
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "sciwrite_project.zip";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                showToast("Download started successfully!", "success");
+
+            } catch (error) {
+                showToast(error.message, "error");
+            } finally {
+                btn.style.display = 'block';
+                loader.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
